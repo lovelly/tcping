@@ -52,14 +52,14 @@ type Target struct {
 	Protocol Protocol
 	Host     string
 	Port     int
-
+	Remote string
 	Counter  int
 	Interval time.Duration
 	Timeout  time.Duration
 }
 
 func (target Target) String() string {
-	return fmt.Sprintf("%s://%s:%d", target.Protocol, target.Host, target.Port)
+	return fmt.Sprintf("%s:%d",  target.Host, target.Port)
 }
 
 // Pinger is a ping interface
@@ -89,6 +89,7 @@ type Result struct {
 	Counter        int
 	SuccessCounter int
 	Target         *Target
+	TTLStr 		   string
 
 	MinDuration   time.Duration
 	MaxDuration   time.Duration
@@ -104,21 +105,18 @@ func (result Result) Avg() time.Duration {
 }
 
 // Failed return failed counter
-func (result Result) Failed() int {
-	return result.Counter - result.SuccessCounter
+func (result Result) Failed() string {
+	return fmt.Sprintf("%0.2f%%",float64(result.Counter - result.SuccessCounter) * 100 / float64(result.Counter ))
 }
 
 func (result Result) String() string {
-	const resultTpl = `
-Ping statistics {{.Target}}
-	{{.Counter}} probes sent.
-	{{.SuccessCounter}} successful, {{.Failed}} failed.
-Approximate trip times:
-	Minimum = {{.MinDuration}}, Maximum = {{.MaxDuration}}, Average = {{.Avg}}`
+	const resultTpl = `--- {{.Target}} ping statistics ---
+{{.Counter}} responses, {{.SuccessCounter}} ok, {{.Failed}} failed
+round-reip mim/avg/max = {{.MinDuration}}/{{.Avg}}/{{.MaxDuration}}`
 	t := template.Must(template.New("result").Parse(resultTpl))
 	res := bytes.NewBufferString("")
 	t.Execute(res, result)
-	return res.String()
+	return result.TTLStr + res.String()
 }
 
 // CheckURI check uri
