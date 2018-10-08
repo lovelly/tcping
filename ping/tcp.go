@@ -32,12 +32,12 @@ func (tcping *TCPing) SetTarget(target *Target) {
 }
 
 // Result return the result
-func (tcping *TCPing) Result() *Result {
+func (tcping TCPing) Result() *Result {
 	return tcping.result
 }
 
 // Start a tcping
-func (tcping *TCPing) Start() <-chan struct{} {
+func (tcping TCPing) Start() <-chan struct{} {
 	go func() {
 		t := time.NewTicker(tcping.target.Interval)
 		defer t.Stop()
@@ -50,13 +50,11 @@ func (tcping *TCPing) Start() <-chan struct{} {
 				}
 				duration, remoteAddr, err := tcping.ping()
 				tcping.result.Counter++
-				if remoteAddr != nil && tcping.target.Remote == "" {
-					tcping.target.Remote = remoteAddr.String()
-				}
+
 				if err != nil {
-					tcping.result.TTLStr += fmt.Sprintf("response timeout for seq=%d\n", tcping.result.Counter-1)
+					fmt.Printf("Ping %s - failed: %s\n", tcping.target, err)
 				} else {
-					tcping.result.TTLStr += fmt.Sprintf("response from %s(%s), sqp=%d time=%s\n", tcping.target, remoteAddr,tcping.result.Counter-1, duration)
+					fmt.Printf("Ping %s(%s) - Connected - time=%s\n", tcping.target, remoteAddr, duration)
 
 					if tcping.result.MinDuration == 0 {
 						tcping.result.MinDuration = duration
@@ -85,7 +83,7 @@ func (tcping *TCPing) Stop() {
 	tcping.done <- struct{}{}
 }
 
-func (tcping *TCPing) ping() (time.Duration, net.Addr, error) {
+func (tcping TCPing) ping() (time.Duration, net.Addr, error) {
 	var remoteAddr net.Addr
 	duration, errIfce := timeIt(func() interface{} {
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", tcping.target.Host, tcping.target.Port), tcping.target.Timeout)
